@@ -80,27 +80,39 @@ fn extract_fn_info(input: &syn::ItemFn) -> (&syn::Visibility, &syn::Ident) {
 }
 
 /// Extracts the function argument types (excluding `self`).
-fn extract_fn_args(input: &syn::ItemFn) -> Vec<&syn::PatType> {
+fn extract_fn_args(input: &syn::ItemFn) -> Vec<syn::PatType> {
     input
         .sig
         .inputs
         .iter()
         .map(|arg| match arg {
             syn::FnArg::Receiver(_) => panic!("function cannot take self"),
-            syn::FnArg::Typed(pat_type) => pat_type,
+            syn::FnArg::Typed(pat_type) => {
+                let mut pat_type = pat_type.clone();
+                if let syn::Pat::Ident(pat_ident) = &mut *pat_type.pat {
+                    pat_ident.mutability = None; // Remove `mut` for argument generation
+                }
+                pat_type
+            }
         })
         .collect()
 }
 
 /// Extracts the argument identifiers for use in macro calls.
-fn extract_arg_idents(input: &syn::ItemFn) -> Vec<&syn::Pat> {
+fn extract_arg_idents(input: &syn::ItemFn) -> Vec<syn::Pat> {
     input
         .sig
         .inputs
         .iter()
         .map(|arg| match arg {
             syn::FnArg::Receiver(_) => panic!("function cannot take self"),
-            syn::FnArg::Typed(pat_type) => &*pat_type.pat,
+            syn::FnArg::Typed(pat_type) => {
+                let mut pat = *pat_type.pat.clone();
+                if let syn::Pat::Ident(pat_ident) = &mut pat {
+                    pat_ident.mutability = None; // Remove `mut` for identifier usage
+                }
+                pat
+            }
         })
         .collect()
 }

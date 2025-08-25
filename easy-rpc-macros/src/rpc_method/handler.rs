@@ -40,7 +40,9 @@ fn gen_arguments_parse_impl(input: &syn::ItemFn) -> TokenStream2 {
             if let FnArg::Typed(pat_type) = arg {
                 let pat = &*pat_type.pat;
                 let ident = match pat {
-                    Pat::Ident(PatIdent { ident, .. }) => quote::quote! { #ident },
+                    Pat::Ident(PatIdent { ident, .. }) => {
+                        quote::quote! { #ident }
+                    }
                     _ => quote::quote! { _ },
                 };
                 let ty = &*pat_type.ty;
@@ -85,7 +87,9 @@ fn gen_arguments_supply(input: &syn::ItemFn) -> TokenStream2 {
             if let FnArg::Typed(pat_type) = arg {
                 let pat = &*pat_type.pat;
                 let ident = match pat {
-                    Pat::Ident(PatIdent { ident, .. }) => quote::quote! { #ident },
+                    Pat::Ident(PatIdent { ident, .. }) => {
+                        quote::quote! { #ident }
+                    }
                     _ => quote::quote! { _ },
                 };
                 let ty = &*pat_type.ty;
@@ -100,6 +104,6 @@ fn gen_arguments_supply(input: &syn::ItemFn) -> TokenStream2 {
         quote::quote! {}
     } else {
         let idents = args.iter().map(|(ident, _)| ident.clone());
-        quote::quote! { ( #(#idents),* ) }
+        quote::quote! { #(#idents),* }
     }
 }
