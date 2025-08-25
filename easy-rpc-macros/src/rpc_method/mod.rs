@@ -11,9 +11,8 @@ use proc_macro2::TokenStream as TokenStream2;
 use syn::Ident;
 
 pub fn generate_rpc_method(input: syn::ItemFn) -> TokenStream {
-    let model = RpcMethod::parse(input);
+    let model = RpcMethod::parse(input.clone());
     let RpcMethod {
-        input,
         input_ident,
         output_ident,
         context_ty_owned,

@@ -1,13 +1,14 @@
 use std::panic;
 
 use heck::AsUpperCamelCase;
-use syn::{punctuated::*, token::Comma, *};
+use proc_macro2::Span;
+use syn::{punctuated::*, spanned::Spanned, token::Comma, *};
 
 use crate::helpers::{extract_return_type, owned_type_version};
 
 #[derive(Clone)]
 pub struct RpcMethod {
-    pub input: ItemFn,
+    pub input_span: Span,
     pub input_ident: Ident,
     pub input_vis: Visibility,
     pub output_ident: Ident, // gen_name
@@ -43,6 +44,7 @@ impl RpcMethod {
         let fn_args_contextless = extract_fn_args(&input, true);
 
         RpcMethod {
+            input_span: input.span(),
             input_ident: input.sig.ident.clone(),
             input_vis: input.vis.clone(),
             output_ident: Ident::new(
@@ -59,7 +61,6 @@ impl RpcMethod {
             fn_args_contextless_as_ident: as_ident(&fn_args_contextless),
             fn_args_contextless,
             response_ty: extract_return_type(&input),
-            input,
         }
     }
 }

@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream as TokenStream2;
-use syn::{Ident, PatType, punctuated::Punctuated, spanned::Spanned as _, token::Comma};
+use syn::{Ident, PatType, punctuated::Punctuated, token::Comma};
 
 pub fn generate(
     super::model::RpcMethod {
@@ -9,13 +9,13 @@ pub fn generate(
         fn_args_as_ident,
         fn_args_contextless,
         response_ty,
-        input,
+        input_span,
         ..
     }: super::model::RpcMethod,
 ) -> TokenStream2 {
     let fn_input = input_ident;
     let arguments_parse_impl = gen_arguments_parse_impl(&fn_args_contextless);
-    let context_ident = context_ident.unwrap_or_else(|| Ident::new("_context", input.span()));
+    let context_ident = context_ident.unwrap_or_else(|| Ident::new("_context", input_span));
 
     quote::quote! {
         #[allow(clippy::ptr_arg)] // Reason: too hard to generate for all the context types
