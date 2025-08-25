@@ -2,6 +2,32 @@ use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::quote;
 use syn::Type;
 
+/// Generates a type safe asynchronous function that calls the input ItemFn
+pub fn generate(input: &syn::ItemFn, impl_kind: RequestImpl) -> TokenStream2 {
+    let (vis, fn_name) = extract_fn_info(input);
+    let client_callback = impl_kind.name(fn_name.span());
+    let fn_args = &extract_fn_args(input);
+    let arg_idents = extract_arg_idents(input);
+    let response_ty = extract_response_ty(input);
+    let actual_response_ty = impl_kind.actual_response_type(response_ty.clone());
+    let return_response = impl_kind.return_response();
+    let rust_doc = impl_kind.rust_doc();
+
+    quote! {
+        #rust_doc
+        #vis async fn #client_callback(client: &::jsonrpsee::http_client::HttpClient, #(#fn_args),*) -> #actual_response_ty {
+            use ::jsonrpsee::core::client::ClientT as _;
+
+            let params = ::jsonrpsee::rpc_params!(#(#arg_idents),*);
+            let response = client
+                .request::<#response_ty, _>(stringify!(#fn_name), params)
+                .await;
+
+            #return_response
+        }
+    }
+}
+
 pub enum RequestImpl {
     Checked,
     Unchecked,
@@ -48,51 +74,34 @@ impl RequestImpl {
     }
 }
 
-/// Generates a type safe asynchronous function that calls the input ItemFn
-pub fn generate(input: &syn::ItemFn, impl_kind: RequestImpl) -> TokenStream2 {
-    let (vis, fn_name) = extract_fn_info(input);
-    let client_callback = impl_kind.name(fn_name.span());
-    let fn_args = extract_fn_args(input);
-    let arg_idents = extract_arg_idents(input);
-    let response_ty = extract_response_ty(input);
-    let actual_response_ty = impl_kind.actual_response_type(response_ty.clone());
-    let return_response = impl_kind.return_response();
-    let rust_doc = impl_kind.rust_doc();
-
-    quote! {
-        #rust_doc
-        #vis async fn #client_callback(client: &::jsonrpsee::http_client::HttpClient, #(#fn_args),*) -> #actual_response_ty {
-            use ::jsonrpsee::core::client::ClientT as _;
-
-            let params = ::jsonrpsee::rpc_params!(#(#arg_idents),*);
-            let response = client
-                .request::<#response_ty, _>(stringify!(#fn_name), params)
-                .await;
-
-            #return_response
-        }
-    }
-}
-
 /// Extracts the function's visibility and name.
 fn extract_fn_info(input: &syn::ItemFn) -> (&syn::Visibility, &syn::Ident) {
     (&input.vis, &input.sig.ident)
 }
 
-/// Extracts the function argument types (excluding `self`).
+/// Extracts the function argument types (excluding `self` and arguments with #[context] attribute).
 fn extract_fn_args(input: &syn::ItemFn) -> Vec<syn::PatType> {
     input
         .sig
         .inputs
         .iter()
-        .map(|arg| match arg {
+        .filter_map(|arg| match arg {
             syn::FnArg::Receiver(_) => panic!("function cannot take self"),
             syn::FnArg::Typed(pat_type) => {
-                let mut pat_type = pat_type.clone();
-                if let syn::Pat::Ident(pat_ident) = &mut *pat_type.pat {
-                    pat_ident.mutability = None; // Remove `mut` for argument generation
+                // Remove argument if it has #[context] attribute
+                if pat_type
+                    .attrs
+                    .iter()
+                    .any(|attr| attr.path().is_ident("context"))
+                {
+                    None
+                } else {
+                    let mut pat_type = pat_type.clone();
+                    if let syn::Pat::Ident(pat_ident) = &mut *pat_type.pat {
+                        pat_ident.mutability = None; // Remove `mut` for argument generation
+                    }
+                    Some(pat_type)
                 }
-                pat_type
             }
         })
         .collect()
@@ -104,14 +113,23 @@ fn extract_arg_idents(input: &syn::ItemFn) -> Vec<syn::Pat> {
         .sig
         .inputs
         .iter()
-        .map(|arg| match arg {
+        .filter_map(|arg| match arg {
             syn::FnArg::Receiver(_) => panic!("function cannot take self"),
             syn::FnArg::Typed(pat_type) => {
-                let mut pat = *pat_type.pat.clone();
-                if let syn::Pat::Ident(pat_ident) = &mut pat {
-                    pat_ident.mutability = None; // Remove `mut` for identifier usage
+                // Remove argument if it has #[context] attribute
+                if pat_type
+                    .attrs
+                    .iter()
+                    .any(|attr| attr.path().is_ident("context"))
+                {
+                    None
+                } else {
+                    let mut pat = *pat_type.pat.clone();
+                    if let syn::Pat::Ident(pat_ident) = &mut pat {
+                        pat_ident.mutability = None; // Remove `mut` for identifier usage
+                    }
+                    Some(pat)
                 }
-                pat
             }
         })
         .collect()

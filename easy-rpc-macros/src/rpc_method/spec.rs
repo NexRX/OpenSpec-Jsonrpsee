@@ -1,10 +1,11 @@
 use quote::quote;
+use syn::{FnArg, ItemFn, LitStr, Pat, PatIdent, PatType, punctuated::Punctuated, token::Comma};
 
 pub fn generate(input: &syn::ItemFn) -> proc_macro2::TokenStream {
-    let name = &input.sig.ident;
-    let description = gen_description(input);
-    let deprecated = gen_deprecated(input);
-    let params = gen_params(input);
+    let name = input.sig.ident.to_string();
+    let description = extract_description(input);
+    let deprecated = extract_deprecated(input);
+    let params = extract_params(input);
 
     quote! {
         fn spec(&self) -> ::easy_rpc::spec::Method {
@@ -27,22 +28,21 @@ pub fn generate(input: &syn::ItemFn) -> proc_macro2::TokenStream {
     }
 }
 
-fn gen_deprecated(input: &syn::ItemFn) -> proc_macro2::TokenStream {
+fn extract_deprecated(input: &ItemFn) -> proc_macro2::TokenStream {
     let is_deprecated = input
         .attrs
         .iter()
         .any(|attr| attr.path().is_ident("deprecated"));
-
     quote! { Some(#is_deprecated) }
 }
 
-fn gen_description(input: &syn::ItemFn) -> proc_macro2::TokenStream {
+fn extract_description(input: &ItemFn) -> proc_macro2::TokenStream {
     let doc_lines: Vec<String> = input
         .attrs
         .iter()
         .filter_map(|attr| {
             if attr.path().is_ident("doc") {
-                attr.parse_args::<syn::LitStr>().ok().map(|lit| lit.value())
+                attr.parse_args::<LitStr>().ok().map(|lit| lit.value())
             } else {
                 None
             }
@@ -52,66 +52,60 @@ fn gen_description(input: &syn::ItemFn) -> proc_macro2::TokenStream {
     if doc_lines.is_empty() {
         quote! { None }
     } else {
-        let doc = doc_lines.join("\n");
-        quote! { Some(#doc) }
+        let joined = doc_lines.join("\n");
+        quote! { Some(#joined) }
     }
 }
 
-fn gen_params(input: &syn::ItemFn) -> Vec<proc_macro2::TokenStream> {
-    let mut params = Vec::new();
+fn extract_params(input: &ItemFn) -> Vec<proc_macro2::TokenStream> {
+    filtered_params(&input.sig.inputs)
+        .into_iter()
+        .map(|param| {
+            let name = match &param {
+                FnArg::Typed(PatType { pat, .. }) => match &**pat {
+                    Pat::Ident(PatIdent { ident, .. }) => quote! { stringify!(#ident).into() },
+                    _ => quote! { None },
+                },
+                FnArg::Receiver(_) => quote! { "self".into() },
+            };
 
-    for param in &input.sig.inputs {
-        // Extract parameter name
-        let name = match param {
-            syn::FnArg::Typed(pat_type) => match &*pat_type.pat {
-                syn::Pat::Ident(ident) => {
-                    let ident = &ident.ident;
-                    quote! { stringify!(#ident).into() }
+            let schema = match &param {
+                FnArg::Typed(PatType { ty, .. }) => quote! { schemars::schema_for!(#ty) },
+                FnArg::Receiver(_) => quote! { panic!("Receiver type not supported for schema") },
+            };
+
+            let deprecated = match &param {
+                FnArg::Typed(PatType { attrs, .. }) => {
+                    let is_deprecated = attrs.iter().any(|attr| attr.path().is_ident("deprecated"));
+                    quote! { Some(#is_deprecated) }
                 }
-                _ => quote! { None },
-            },
-            syn::FnArg::Receiver(_) => quote! { "self".into() },
-        };
+                FnArg::Receiver(_) => quote! { None },
+            };
 
-        // For demonstration, summary and description are not extracted from param attributes here.
-        let summary = quote! { None };
-        let description = quote! { None };
-
-        // Required: function parameters are always required
-        let required = quote! { Some(true) };
-
-        // Schema: use the type of the parameter
-        let schema = match param {
-            syn::FnArg::Typed(pat_type) => {
-                let ty = &pat_type.ty;
-                quote! { schemars::schema_for!(#ty) }
+            quote! {
+                ::easy_rpc::spec::ContentDescriptor {
+                    name: #name,
+                    summary: None,
+                    description: None,
+                    required: Some(true),
+                    schema: #schema,
+                    deprecated: #deprecated,
+                }
             }
-            syn::FnArg::Receiver(_) => quote! { <panic> },
-        };
+        })
+        .collect()
+}
 
-        // Deprecated: check for #[deprecated] attribute on the param
-        let deprecated = match param {
-            syn::FnArg::Typed(pat_type) => {
-                let is_deprecated = pat_type
-                    .attrs
-                    .iter()
-                    .any(|attr| attr.path().is_ident("deprecated"));
-                quote! { Some(#is_deprecated) }
+/// Remove context parameters from the input
+fn filtered_params(input: &Punctuated<FnArg, Comma>) -> Vec<FnArg> {
+    input
+        .iter()
+        .filter(|param| match param {
+            FnArg::Receiver(_) => true,
+            FnArg::Typed(PatType { attrs, .. }) => {
+                attrs.iter().all(|attr| !attr.path().is_ident("context"))
             }
-            syn::FnArg::Receiver(_) => quote! { None },
-        };
-
-        params.push(quote! {
-            ::easy_rpc::spec::ContentDescriptor {
-                name: #name,
-                summary: #summary,
-                description: #description,
-                required: #required,
-                schema: #schema,
-                deprecated: #deprecated,
-            }
-        });
-    }
-
-    params
+        })
+        .cloned()
+        .collect()
 }
