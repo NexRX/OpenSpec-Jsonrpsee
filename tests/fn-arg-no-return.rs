@@ -7,7 +7,7 @@ use jsonrpsee::{Extensions, types::Params};
 
 #[rpc]
 /// This is a doc comment for the do_something method.
-fn do_something(first_arg: String) {
+fn do_something(_first_arg: String) {
     println!("hello world");
 }
 

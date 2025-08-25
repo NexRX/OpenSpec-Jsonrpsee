@@ -1,20 +1,26 @@
 use proc_macro2::TokenStream as TokenStream2;
 
-pub fn gen_callback_impl(input: &syn::ItemFn, wrapper_fn: &TokenStream2) -> TokenStream2 {
+pub fn gen_callback_impl(
+    input: &syn::ItemFn,
+    wrapper_fn: &TokenStream2,
+    context: &syn::Type,
+    response: &syn::Type,
+) -> TokenStream2 {
     let wrapped_fn = wrapper_fn;
     let arguments_parse_impl = gen_arguments_parse_impl(input);
     let arguments_supply = gen_arguments_supply(input);
 
     quote::quote! {
-        fn callback(&self) -> SyncCallback<(), ::jsonrpsee::core::RpcResult<()>> {
+        fn callback(&self) -> SyncCallback<#context, ::jsonrpsee::core::RpcResult<#response>> {
             fn callback_wrapper<'a, 'b, 'c>(
                 params: Params<'a>,
-                _context: &'b (),
+                _context: &'b #context,
                 _ext: &'c Extensions,
-            ) ->  ::jsonrpsee::core::RpcResult<()>{
+            ) ->  ::jsonrpsee::core::RpcResult<#response>{
+                println!("callback_wrapper called, {:?}", params);
                 #arguments_parse_impl;
-                #wrapped_fn(#arguments_supply);
-                Ok(())
+                let response = #wrapped_fn(#arguments_supply);
+                Ok(response)
             }
 
             callback_wrapper
@@ -67,8 +73,14 @@ fn gen_arguments_parse_impl(input: &syn::ItemFn) -> TokenStream2 {
         )
     };
 
+    let parse_fn = if args.len() == 1 {
+        quote::quote! { one }
+    } else {
+        quote::quote! { parse }
+    };
+
     quote::quote! {
-        let #pat : #ty = params.parse()?;
+        let #pat : #ty = params.#parse_fn()?;
     }
 }
 

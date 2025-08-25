@@ -19,7 +19,7 @@ fn callback() -> SyncCallback<(), RpcResult<()>> {
         _ext: &'c Extensions,
     ) -> RpcResult<()> {
         let (a, b): (String, String) = params.parse()?;
-        do_something();
+        let result = do_something();
         Ok(())
     }
 
@@ -32,4 +32,18 @@ pub fn test_jsonrpsee() {
     module
         .register_method("method.name()", callback())
         .expect("proof of concept should be able to register");
+}
+
+#[test]
+pub fn param_deserialize_one() {
+    let params = Params::new(Some("[\"hello\"]"));
+    let result = params.one::<String>();
+    assert_eq!(Ok("hello".to_string()), result);
+}
+
+#[test]
+pub fn param_deserialize_two() {
+    let params = Params::new(Some("[\"hello\", 2]"));
+    let result = params.parse::<(String, u32)>();
+    assert_eq!(Ok(("hello".to_string(), 2)), result);
 }
