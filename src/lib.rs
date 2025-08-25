@@ -2,6 +2,8 @@ pub mod spec;
 #[cfg(feature = "test")]
 pub mod test;
 
+pub use easy_rpc_macros::rpc;
+
 use jsonrpsee::{
     Extensions, RpcModule,
     core::{RegisterMethodError, RpcResult},

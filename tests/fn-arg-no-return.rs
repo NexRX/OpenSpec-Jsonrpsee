@@ -1,8 +1,7 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::unused_unit)]
 
-use easy_rpc::EasyModule;
-use easy_rpc_macros::rpc;
+use easy_rpc::{EasyModule, rpc};
 
 #[rpc]
 /// This is a doc comment for the do_something method.
