@@ -1,25 +1,25 @@
 use proc_macro2::TokenStream as TokenStream2;
+use syn::Ident;
 
-pub fn gen_callback_impl(
+pub fn generate(
     input: &syn::ItemFn,
-    wrapper_fn: &TokenStream2,
+    original_ident: &Ident,
     context: &syn::Type,
     response: &syn::Type,
 ) -> TokenStream2 {
-    let wrapped_fn = wrapper_fn;
+    let original_fn = original_ident;
     let arguments_parse_impl = gen_arguments_parse_impl(input);
     let arguments_supply = gen_arguments_supply(input);
 
     quote::quote! {
-        fn callback(&self) -> SyncCallback<#context, ::jsonrpsee::core::RpcResult<#response>> {
+        fn handler(&self) -> SyncCallback<#context, ::jsonrpsee::core::RpcResult<#response>> {
             fn callback_wrapper<'a, 'b, 'c>(
-                params: Params<'a>,
+                params: ::jsonrpsee::types::Params<'a>,
                 _context: &'b #context,
-                _ext: &'c Extensions,
-            ) ->  ::jsonrpsee::core::RpcResult<#response>{
-                println!("callback_wrapper called, {:?}", params);
-                #arguments_parse_impl;
-                let response = #wrapped_fn(#arguments_supply);
+                _ext: &'c ::jsonrpsee::Extensions,
+            ) -> ::jsonrpsee::core::RpcResult<#response> {
+                #arguments_parse_impl
+                let response = #original_fn(#arguments_supply);
                 Ok(response)
             }
 
@@ -28,15 +28,6 @@ pub fn gen_callback_impl(
     }
 }
 
-/// generates the parsing step in the json rpc handler
-/// should create something like this when there is two arguments for example:
-/// ```no_run
-/// let (a, b): (String, u32) = params.parse()?;
-/// ```
-/// and when there is no arguments:
-/// ```no_run
-/// let (): () = params.parse()?;
-/// ```
 fn gen_arguments_parse_impl(input: &syn::ItemFn) -> TokenStream2 {
     use syn::{FnArg, Pat, PatIdent};
 
@@ -46,18 +37,16 @@ fn gen_arguments_parse_impl(input: &syn::ItemFn) -> TokenStream2 {
         .inputs
         .iter()
         .filter_map(|arg| {
-            match arg {
-                FnArg::Typed(pat_type) => {
-                    // Get the argument name
-                    let pat = &*pat_type.pat;
-                    let ident = match pat {
-                        Pat::Ident(PatIdent { ident, .. }) => quote::quote! { #ident },
-                        _ => quote::quote! { _ },
-                    };
-                    let ty = &*pat_type.ty;
-                    Some((ident, quote::quote! { #ty }))
-                }
-                _ => None,
+            if let FnArg::Typed(pat_type) = arg {
+                let pat = &*pat_type.pat;
+                let ident = match pat {
+                    Pat::Ident(PatIdent { ident, .. }) => quote::quote! { #ident },
+                    _ => quote::quote! { _ },
+                };
+                let ty = &*pat_type.ty;
+                Some((ident, quote::quote! { #ty }))
+            } else {
+                None
             }
         })
         .collect();
@@ -93,18 +82,16 @@ fn gen_arguments_supply(input: &syn::ItemFn) -> TokenStream2 {
         .inputs
         .iter()
         .filter_map(|arg| {
-            match arg {
-                FnArg::Typed(pat_type) => {
-                    // Get the argument name
-                    let pat = &*pat_type.pat;
-                    let ident = match pat {
-                        Pat::Ident(PatIdent { ident, .. }) => quote::quote! { #ident },
-                        _ => quote::quote! { _ },
-                    };
-                    let ty = &*pat_type.ty;
-                    Some((ident, quote::quote! { #ty }))
-                }
-                _ => None,
+            if let FnArg::Typed(pat_type) = arg {
+                let pat = &*pat_type.pat;
+                let ident = match pat {
+                    Pat::Ident(PatIdent { ident, .. }) => quote::quote! { #ident },
+                    _ => quote::quote! { _ },
+                };
+                let ty = &*pat_type.ty;
+                Some((ident, quote::quote! { #ty }))
+            } else {
+                None
             }
         })
         .collect();

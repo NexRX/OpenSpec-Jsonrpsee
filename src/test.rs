@@ -1,10 +1,10 @@
 use crate::EasyModule;
-use jsonrpsee::server::{Server, ServerHandle};
+use jsonrpsee::{http_client::HttpClient, server::Server};
 use std::net::SocketAddr;
 
-pub async fn run_server<Context: Send + Sync + 'static>(
+pub async fn test_server<Context: Send + Sync + 'static>(
     module: EasyModule<Context>,
-) -> anyhow::Result<(SocketAddr, ())> {
+) -> anyhow::Result<(HttpClient, SocketAddr)> {
     let server = Server::builder()
         .build("127.0.0.1:0".parse::<SocketAddr>()?)
         .await?;
@@ -15,7 +15,11 @@ pub async fn run_server<Context: Send + Sync + 'static>(
     let handle = server.start(module);
     assert!(!handle.is_stopped());
 
+    let client: HttpClient = jsonrpsee::http_client::HttpClientBuilder::default()
+        .build(format!("http://{addr}"))
+        .expect("client should be created");
+
     tokio::spawn(handle.stopped());
 
-    Ok((addr, ()))
+    Ok((client, addr))
 }

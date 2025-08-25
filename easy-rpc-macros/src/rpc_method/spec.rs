@@ -1,13 +1,13 @@
 use quote::quote;
 
-pub fn gen_method_impl(input: &syn::ItemFn) -> proc_macro2::TokenStream {
+pub fn generate(input: &syn::ItemFn) -> proc_macro2::TokenStream {
     let name = &input.sig.ident;
     let description = gen_description(input);
     let deprecated = gen_deprecated(input);
     let params = gen_params(input);
 
     quote! {
-        fn spec(&self) -> easy_rpc::spec::Method {
+        fn spec(&self) -> ::easy_rpc::spec::Method {
             ::easy_rpc::spec::Method {
                 name: stringify!(#name).into(),
                 tags: None,

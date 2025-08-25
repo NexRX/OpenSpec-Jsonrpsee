@@ -3,7 +3,6 @@
 
 use easy_rpc::{EasyModule, Method, SyncCallback};
 use easy_rpc_macros::rpc;
-use jsonrpsee::{Extensions, types::Params};
 
 #[rpc]
 /// This is a doc comment for the do_something method.
@@ -15,6 +14,6 @@ fn do_something(_first_arg: String) {
 pub fn test_jsonrpsee() {
     let mut module = EasyModule::new(());
     module
-        .add_method(do_something)
+        .add_method(DoSomething)
         .expect("proof of concept should be able to register");
 }

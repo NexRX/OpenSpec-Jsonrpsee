@@ -1,4 +1,5 @@
 pub mod spec;
+#[cfg(feature = "test")]
 pub mod test;
 
 use jsonrpsee::{
@@ -11,9 +12,12 @@ use serde::Serialize;
 pub type SyncCallback<Context, Response> = fn(Params, &Context, &Extensions) -> Response;
 
 pub trait Method<Context, Response: Serialize + Clone + 'static = ()> {
+    /// Returns the name of the method
     fn name(&self) -> &'static str;
+    /// Returns a OpenRPC specification for the method
     fn spec(&self) -> spec::Method;
-    fn callback(&self) -> SyncCallback<Context, RpcResult<Response>>;
+    /// Returns a function (static) that handles the RPC request for the server
+    fn handler(&self) -> SyncCallback<Context, RpcResult<Response>>;
 }
 
 pub struct EasyModule<Context = ()> {
@@ -35,7 +39,7 @@ impl<Context: Send + Sync + 'static> EasyModule<Context> {
     ) -> Result<(), RegisterMethodError> {
         self.methods.push(method.spec());
         self.module
-            .register_method(method.name(), method.callback())?;
+            .register_method(method.name(), method.handler())?;
         Ok(())
     }
 
