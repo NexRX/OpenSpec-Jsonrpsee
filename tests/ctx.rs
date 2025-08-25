@@ -44,3 +44,31 @@ async fn test_simple_ctx() {
         response
     );
 }
+
+struct CtxStruct {
+    ctx_value: String,
+}
+
+#[rpc]
+/// This is a doc comment for the method.
+fn struct_ctx(#[context] ctx: &CtxStruct) -> String {
+    format!("Response with unit context {:?}", ctx.ctx_value)
+}
+
+#[tokio::test]
+async fn test_struct_ctx() {
+    let mut module = EasyModule::new(CtxStruct {
+        ctx_value: "string ctx".to_string(),
+    });
+    module
+        .add_method(StructCtx)
+        .expect("proof of concept should be able to register");
+
+    let (client, _addr) = test_server(module).await.expect("server should start");
+    let response = StructCtx::request_unchecked(&client).await;
+
+    assert_eq!(
+        "Response with unit context \"string ctx\"".to_string(),
+        response
+    );
+}

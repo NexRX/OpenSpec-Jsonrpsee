@@ -123,6 +123,45 @@ async fn test_handles_struct_in_struct() {
     assert_eq!(value.b, response);
 }
 
-// Test References
+/// Test References
 
-// Test argument vector
+#[rpc]
+/// This is a doc comment for the method.
+fn reference_args(value: &str) -> String {
+    format!("Reference: {value}")
+}
+
+#[tokio::test]
+async fn test_handles_reference_args() {
+    let mut module = EasyModule::new(());
+    module
+        .add_method(ReferenceArgs)
+        .expect("proof of concept should be able to register");
+
+    let (client, _addr) = test_server(module).await.expect("server should start");
+
+    let response = ReferenceArgs::request_unchecked(&client, "hello").await;
+    assert_eq!(response, "Reference: hello");
+}
+
+/// Test argument vector
+
+#[rpc]
+/// This is a doc comment for the method.
+fn vector_args(values: Vec<String>) -> usize {
+    values.len()
+}
+
+#[tokio::test]
+async fn test_handles_vector_args() {
+    let mut module = EasyModule::new(());
+    module
+        .add_method(VectorArgs)
+        .expect("proof of concept should be able to register");
+
+    let (client, _addr) = test_server(module).await.expect("server should start");
+
+    let values = vec!["one".to_string(), "two".to_string(), "three".to_string()];
+    let response = VectorArgs::request_unchecked(&client, values.clone()).await;
+    assert_eq!(response, values.len());
+}
