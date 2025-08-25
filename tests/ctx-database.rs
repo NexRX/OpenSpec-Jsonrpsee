@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::unused_unit)]
 
-use easy_rpc::{EasyModule, Method, SyncCallback, test::test_server};
+use easy_rpc::{EasyModule, test::test_server};
 use easy_rpc_macros::rpc;
 
 #[rpc]
@@ -25,7 +25,7 @@ async fn test_unit_ctx() {
 
 #[rpc]
 /// This is a doc comment for the method.
-fn simple_ctx(#[context] ctx: &String) -> String {
+fn simple_ctx(#[context] ctx: &str) -> String {
     format!("Response with unit context {ctx:?}")
 }
 

@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::unused_unit)]
 
-use easy_rpc::{EasyModule, Method, SyncCallback};
+use easy_rpc::EasyModule;
 use easy_rpc_macros::rpc;
 
 #[rpc]

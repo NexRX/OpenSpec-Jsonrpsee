@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::unused_unit)]
 
-use easy_rpc::{EasyModule, Method, SyncCallback, test::test_server};
+use easy_rpc::{EasyModule, test::test_server};
 use easy_rpc_macros::rpc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

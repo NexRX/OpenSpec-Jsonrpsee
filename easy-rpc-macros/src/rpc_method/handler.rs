@@ -1,28 +1,32 @@
 use proc_macro2::TokenStream as TokenStream2;
-use syn::{Ident, spanned::Spanned as _};
+use syn::{Ident, PatType, punctuated::Punctuated, spanned::Spanned as _, token::Comma};
 
 pub fn generate(
-    input: &syn::ItemFn,
-    original_ident: &Ident,
-    context_ty: &syn::Type,
-    context_ty_to_ref: &syn::Type,
-    response: &syn::Type,
+    super::model::RpcMethod {
+        input_ident,
+        context_ty_owned,
+        context_ident,
+        fn_args_as_ident,
+        fn_args_contextless,
+        response_ty,
+        input,
+        ..
+    }: super::model::RpcMethod,
 ) -> TokenStream2 {
-    let original_fn = original_ident;
-    let arguments_parse_impl = gen_arguments_parse_impl(input);
-    let arguments_supply = gen_arguments_supply(input);
-    let context_ident =
-        extract_context_ident(input).unwrap_or_else(|| Ident::new("_context", input.span()));
+    let fn_input = input_ident;
+    let arguments_parse_impl = gen_arguments_parse_impl(&fn_args_contextless);
+    let context_ident = context_ident.unwrap_or_else(|| Ident::new("_context", input.span()));
 
     quote::quote! {
-        fn handler(&self) -> SyncCallback<#context_ty, ::jsonrpsee::core::RpcResult<#response>> {
+        #[allow(clippy::ptr_arg)] // Reason: too hard to generate for all the context types
+        fn handler(&self) -> ::easy_rpc::SyncCallback<#context_ty_owned, ::jsonrpsee::core::RpcResult<#response_ty>> {
             fn callback_wrapper<'a, 'b, 'c>(
                 params: ::jsonrpsee::types::Params<'a>,
-                #context_ident: &'b #context_ty_to_ref,
+                #context_ident: &'b #context_ty_owned,
                 _ext: &'c ::jsonrpsee::Extensions,
-            ) -> ::jsonrpsee::core::RpcResult<#response> {
+            ) -> ::jsonrpsee::core::RpcResult<#response_ty> {
                 #arguments_parse_impl
-                let response = #original_fn(#arguments_supply);
+                let response = #fn_input(#fn_args_as_ident);
                 Ok(response)
             }
 
@@ -31,105 +35,28 @@ pub fn generate(
     }
 }
 
-fn gen_arguments_parse_impl(input: &syn::ItemFn) -> TokenStream2 {
-    use syn::{FnArg, Pat, PatIdent};
+fn gen_arguments_parse_impl(fn_args_contextless: &Punctuated<PatType, Comma>) -> TokenStream2 {
+    use syn::{Pat, Type};
 
-    // Collect argument names and types, skipping the receiver if present
-    let args: Vec<_> = input
-        .sig
-        .inputs
+    // panic!("asdasd {fn_args_contextless:?}");
+
+    let pat: Punctuated<Pat, Comma> = fn_args_contextless
         .iter()
-        .filter_map(|arg| {
-            if let FnArg::Typed(pat_type) = arg {
-                // Skip argument if it has #[context] attribute
-                if pat_type
-                    .attrs
-                    .iter()
-                    .any(|attr| attr.path().is_ident("context"))
-                {
-                    return None;
-                }
-                let pat = &*pat_type.pat;
-                let ident = match pat {
-                    Pat::Ident(PatIdent { ident, .. }) => {
-                        quote::quote! { #ident }
-                    }
-                    _ => quote::quote! { _ },
-                };
-                let ty = &*pat_type.ty;
-                Some((ident, quote::quote! { #ty }))
-            } else {
-                None
-            }
-        })
+        .map(|pat_type| (*pat_type.pat).clone())
         .collect();
 
-    let (pat, ty) = if args.is_empty() {
-        (quote::quote! { () }, quote::quote! { () })
-    } else {
-        let idents = args.iter().map(|(ident, _)| ident.clone());
-        let tys = args.iter().map(|(_, ty)| ty.clone());
-        (
-            quote::quote! { ( #(#idents),* ) },
-            quote::quote! { ( #(#tys),* ) },
-        )
-    };
+    let ty: Punctuated<Type, Comma> = fn_args_contextless
+        .iter()
+        .map(|pat_type| (*pat_type.ty).clone())
+        .collect();
 
-    let parse_fn = if args.len() == 1 {
+    let fn_parse = if fn_args_contextless.len() == 1 {
         quote::quote! { one }
     } else {
         quote::quote! { parse }
     };
 
     quote::quote! {
-        let #pat : #ty = params.#parse_fn()?;
+        let (#pat): (#ty) = params.#fn_parse()?;
     }
-}
-
-fn gen_arguments_supply(input: &syn::ItemFn) -> TokenStream2 {
-    use syn::{FnArg, Pat, PatIdent};
-
-    // Collect argument names and types, skipping the receiver if present
-    let args: Vec<_> = input
-        .sig
-        .inputs
-        .iter()
-        .filter_map(|arg| {
-            if let FnArg::Typed(pat_type) = arg {
-                let pat = &*pat_type.pat;
-                let ident = match pat {
-                    Pat::Ident(PatIdent { ident, .. }) => {
-                        quote::quote! { #ident }
-                    }
-                    _ => quote::quote! { _ },
-                };
-                let ty = &*pat_type.ty;
-                Some((ident, quote::quote! { #ty }))
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    if args.is_empty() {
-        quote::quote! {}
-    } else {
-        let idents = args.iter().map(|(ident, _)| ident.clone());
-        quote::quote! { #(#idents),* }
-    }
-}
-
-pub fn extract_context_ident(input: &syn::ItemFn) -> Option<syn::Ident> {
-    for arg in &input.sig.inputs {
-        if let syn::FnArg::Typed(pat_type) = arg {
-            for attr in &pat_type.attrs {
-                if attr.path().is_ident("context") {
-                    if let syn::Pat::Ident(syn::PatIdent { ident, .. }) = &*pat_type.pat {
-                        return Some(ident.clone());
-                    }
-                }
-            }
-        }
-    }
-    None
 }
