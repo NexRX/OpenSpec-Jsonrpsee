@@ -1,3 +1,4 @@
+mod client;
 mod handler;
 mod model;
 mod request;
@@ -6,11 +7,12 @@ mod spec;
 
 use crate::rpc_method::request::RequestImpl;
 use model::RpcMethod;
+pub(crate) use model::RpcMethodArgs;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use syn::Ident;
 
-pub fn generate_rpc_method(input: syn::ItemFn) -> TokenStream {
+pub fn generate_rpc_method(input: syn::ItemFn, args: RpcMethodArgs) -> TokenStream {
     let model = RpcMethod::parse(input.clone());
     let RpcMethod {
         input_ident,
@@ -27,7 +29,9 @@ pub fn generate_rpc_method(input: syn::ItemFn) -> TokenStream {
 
     let fn_name = gen_fn_name(&input_ident);
     let fn_spec = spec::generate(&input);
-    let fn_handler = handler::generate(model);
+    let fn_handler = handler::generate(&model);
+
+    let impl_client = client::generate(&model, &args);
 
     quote::quote! {
         #sanitize_input
@@ -45,6 +49,8 @@ pub fn generate_rpc_method(input: syn::ItemFn) -> TokenStream {
             #fn_spec
             #fn_handler
         }
+
+        #impl_client
     }
     .into()
 }

@@ -1,10 +1,26 @@
-use std::panic;
-
+use crate::helpers::{extract_return_type, owned_type_version};
 use heck::AsUpperCamelCase;
+use proc_macro_error::abort;
 use proc_macro2::Span;
+use std::panic;
 use syn::{punctuated::*, spanned::Spanned, token::Comma, *};
 
-use crate::helpers::{extract_return_type, owned_type_version};
+#[derive(Debug, darling::FromMeta)]
+#[darling(derive_syn_parse)]
+pub struct RpcMethodArgs {
+    #[darling(default)]
+    pub client: Option<syn::Path>,
+    pub client_field: Option<Expr>,
+}
+
+impl RpcMethodArgs {
+    pub fn parse(args: proc_macro::TokenStream) -> Self {
+        match syn::parse::<Self>(args) {
+            Ok(v) => v,
+            Err(e) => abort!(e.span(), "Incorrect macro arguments: {:#?}", e),
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct RpcMethod {

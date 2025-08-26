@@ -12,7 +12,7 @@ pub fn generate(
         fn_args_contextless_as_ident,
         response_ty,
         ..
-    }: &super::RpcMethod,
+    }: &RpcMethod,
     impl_kind: RequestImpl,
 ) -> TokenStream2 {
     let request_ident = impl_kind.name(input_ident.span());
