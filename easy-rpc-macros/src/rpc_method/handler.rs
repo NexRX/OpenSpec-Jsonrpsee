@@ -4,6 +4,7 @@ use syn::{Ident, PatType, punctuated::Punctuated, token::Comma};
 
 pub fn generate(
     RpcMethod {
+        input_async,
         input_ident,
         context_ty_owned,
         context_ident,
@@ -20,28 +21,49 @@ pub fn generate(
         .clone()
         .unwrap_or(Ident::new("_context", input_span.clone()));
 
-    quote::quote! {
-        #[allow(clippy::ptr_arg)] // Reason: too hard to generate for all the context types
-        fn handler(&self) -> ::easy_rpc::SyncCallback<#context_ty_owned, ::jsonrpsee::core::RpcResult<#response_ty>> {
-            fn callback_wrapper<'a, 'b, 'c>(
-                params: ::jsonrpsee::types::Params<'a>,
-                #context_ident: &'b #context_ty_owned,
-                _ext: &'c ::jsonrpsee::Extensions,
-            ) -> ::jsonrpsee::core::RpcResult<#response_ty> {
-                #arguments_parse_impl
-                let response = #fn_input(#fn_args_as_ident);
-                Ok(response)
-            }
+    if input_async.is_some() {
+        quote::quote! {
+            #[allow(clippy::ptr_arg)] // Reason: too hard to generate for all the context types
+            fn handler(&self) -> ::easy_rpc::AsyncCallback<#context_ty_owned, ::jsonrpsee::core::RpcResult<#response_ty>> {
+                fn callback_wrapper(
+                    params: ::jsonrpsee::types::Params<'static>,
+                    #context_ident: ::std::sync::Arc<#context_ty_owned>,
+                    _ext: ::jsonrpsee::Extensions,
+                ) -> ::std::pin::Pin<
+                    Box<dyn ::std::future::Future<Output = ::jsonrpsee::core::RpcResult<#response_ty>> + Send>,
+                > {
+                    Box::pin(async move {
+                        #arguments_parse_impl
+                        let response = #fn_input(#fn_args_as_ident).await;
+                        Ok(response)
+                    })
+                }
 
-            callback_wrapper
+                callback_wrapper
+            }
+        }
+    } else {
+        quote::quote! {
+            #[allow(clippy::ptr_arg)] // Reason: too hard to generate for all the context types
+            fn handler(&self) -> ::easy_rpc::SyncCallback<#context_ty_owned, ::jsonrpsee::core::RpcResult<#response_ty>> {
+                fn callback_wrapper<'a, 'b, 'c>(
+                    params: ::jsonrpsee::types::Params<'a>,
+                    #context_ident: &'b #context_ty_owned,
+                    _ext: &'c ::jsonrpsee::Extensions,
+                ) -> ::jsonrpsee::core::RpcResult<#response_ty> {
+                    #arguments_parse_impl
+                    let response = #fn_input(#fn_args_as_ident);
+                    Ok(response)
+                }
+
+                callback_wrapper
+            }
         }
     }
 }
 
 fn gen_arguments_parse_impl(fn_args_contextless: &Punctuated<PatType, Comma>) -> TokenStream2 {
     use syn::{Pat, Type};
-
-    // panic!("asdasd {fn_args_contextless:?}");
 
     let pat: Punctuated<Pat, Comma> = fn_args_contextless
         .iter()

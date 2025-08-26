@@ -3,7 +3,12 @@ use heck::AsUpperCamelCase;
 use proc_macro_error::abort;
 use proc_macro2::Span;
 use std::panic;
-use syn::{punctuated::*, spanned::Spanned, token::Comma, *};
+use syn::{
+    punctuated::*,
+    spanned::Spanned,
+    token::{Async, Comma},
+    *,
+};
 
 #[derive(Debug, darling::FromMeta)]
 #[darling(derive_syn_parse)]
@@ -25,6 +30,7 @@ impl RpcMethodArgs {
 #[derive(Clone)]
 pub struct RpcMethod {
     pub input_span: Span,
+    pub input_async: Option<Async>,
     pub input_ident: Ident,
     pub input_vis: Visibility,
     pub output_ident: Ident, // gen_name
@@ -60,6 +66,7 @@ impl RpcMethod {
         let fn_args_contextless = extract_fn_args(&input, true);
 
         RpcMethod {
+            input_async: input.sig.asyncness,
             input_span: input.span(),
             input_ident: input.sig.ident.clone(),
             input_vis: input.vis.clone(),

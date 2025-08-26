@@ -15,6 +15,7 @@ use syn::Ident;
 pub fn generate_rpc_method(input: syn::ItemFn, args: RpcMethodArgs) -> TokenStream {
     let model = RpcMethod::parse(input.clone());
     let RpcMethod {
+        input_async,
         input_ident,
         output_ident,
         context_ty_owned,
@@ -26,6 +27,8 @@ pub fn generate_rpc_method(input: syn::ItemFn, args: RpcMethodArgs) -> TokenStre
 
     let fn_request = request::generate(&model, RequestImpl::Checked);
     let fn_request_unchecked = request::generate(&model, RequestImpl::Unchecked);
+
+    let trait_method = gen_method_trait(input_async.is_some());
 
     let fn_name = gen_fn_name(&input_ident);
     let fn_spec = spec::generate(&input);
@@ -44,7 +47,7 @@ pub fn generate_rpc_method(input: syn::ItemFn, args: RpcMethodArgs) -> TokenStre
             #fn_request_unchecked
         }
 
-        impl ::easy_rpc::Method<#context_ty_owned, #response_ty> for #output_ident {
+        impl #trait_method<#context_ty_owned, #response_ty> for #output_ident {
             #fn_name
             #fn_spec
             #fn_handler
@@ -60,5 +63,12 @@ fn gen_fn_name(fn_name: &Ident) -> TokenStream2 {
         fn name(&self) -> &'static str {
             stringify!(#fn_name)
         }
+    }
+}
+
+fn gen_method_trait(is_async: bool) -> TokenStream2 {
+    match is_async {
+        true => quote::quote! { ::easy_rpc::AsyncRpcMethod },
+        false => quote::quote! { ::easy_rpc::RpcMethod },
     }
 }
