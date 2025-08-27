@@ -14,22 +14,18 @@ pub type AsyncCallback<Context, Response> =
         ::jsonrpsee::Extensions,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send>>;
 
+pub enum ServerHandler<Context, Response> {
+    Sync(SyncCallback<Context, Response>),
+    Async(AsyncCallback<Context, Response>),
+}
+
 pub trait RpcMethod<Context, Response: Serialize + Clone + 'static = ()> {
     /// Returns the name of the method
     fn name(&self) -> &'static str;
     /// Returns a OpenRPC specification for the method
     fn spec(&self) -> spec::Method;
     /// Returns a function (static) that handles the RPC request for the server
-    fn handler(&self) -> SyncCallback<Context, RpcResult<Response>>;
-}
-
-pub trait AsyncRpcMethod<Context, Response: Serialize + Clone + 'static = ()> {
-    /// Returns the name of the method
-    fn name(&self) -> &'static str;
-    /// Returns a OpenRPC specification for the method
-    fn spec(&self) -> spec::Method;
-    /// Returns a function (static) that handles the RPC request for the server
-    fn handler(&self) -> AsyncCallback<Context, RpcResult<Response>>;
+    fn handler(&self) -> ServerHandler<Context, RpcResult<Response>>;
 }
 
 pub struct EasyModule<Context = ()> {
@@ -50,18 +46,16 @@ impl<Context: Send + Sync + 'static> EasyModule<Context> {
         method: impl RpcMethod<Context, T>,
     ) -> Result<(), RegisterMethodError> {
         self.methods.push(method.spec());
-        self.module
-            .register_method(method.name(), method.handler())?;
-        Ok(())
-    }
 
-    pub fn add_method_async<T: Serialize + Clone + 'static>(
-        &mut self,
-        method: impl AsyncRpcMethod<Context, T>,
-    ) -> Result<(), RegisterMethodError> {
-        self.methods.push(method.spec());
-        self.module
-            .register_async_method(method.name(), method.handler())?;
+        match method.handler() {
+            ServerHandler::Sync(handler) => {
+                self.module.register_method(method.name(), handler)?;
+            }
+            ServerHandler::Async(handler) => {
+                self.module.register_async_method(method.name(), handler)?;
+            }
+        }
+
         Ok(())
     }
 
