@@ -2,6 +2,8 @@
 //! creating and managing JSON-RPC modules using the `jsonrpsee` library. It allows for
 //! openspec_ registration of synchronous and asynchronous RPC methods, as well as conversion
 //! into a `jsonrpsee::RpcModule`.
+use std::path::Path;
+
 use crate::{OpenRpcSpec, RpcMethod, ServerHandler, spec};
 use jsonrpsee::core::RegisterMethodError;
 use serde::Serialize;
@@ -83,6 +85,11 @@ impl<Context: Send + Sync + 'static> EasyModule<Context> {
     /// Returns a reference to the OpenRPC Specification (semver 2.0.0).
     pub fn spec(&self) -> &OpenRpcSpec {
         &self.spec
+    }
+
+    /// Writes the OpenRPC Specification with every info & method added so far to a file.
+    pub fn write_spec(&self, filepath: &Path) -> Result<(), std::io::Error> {
+        std::fs::write(filepath, self.spec.to_string_pretty())
     }
 
     /// Adds a new RPC method to the module.
