@@ -32,10 +32,14 @@ use std::net::SocketAddr;
 /// ```
 pub async fn test_server<Context: Send + Sync + 'static>(
     module: EasyModule<Context>,
-) -> anyhow::Result<(HttpClient, SocketAddr)> {
+) -> std::io::Result<(HttpClient, SocketAddr)> {
     // Build a new JSON-RPC server bound to a random available port.
     let server = Server::builder()
-        .build("127.0.0.1:0".parse::<SocketAddr>()?)
+        .build(
+            "127.0.0.1:0"
+                .parse::<SocketAddr>()
+                .map_err(std::io::Error::other)?,
+        )
         .await?;
 
     // Convert the provided `EasyModule` into a JSON-RPC module.

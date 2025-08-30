@@ -5,16 +5,19 @@ edition = "2024"
 
 [features]
 default = []
-test = []
+test = ["dep:tokio"]
 
 [dependencies]
 easy-rpc-macros = { path = "./easy-rpc-macros" }
-anyhow = "1.0.99"
-jsonrpsee = { version = "0.26", features = ["server", "macros", "client"] }
+jsonrpsee = { version = "0.26", default-features = false }
 serde = { version = "1.0.219", features = ["serde_derive"] }
-tokio = { version = "1", features = ["full"] }
-serde_json = "1.0.143"
+serde_json = { version = "1.0.143", default-features = false }
+tokio = { version = "1", features = ["full"], optional = true }
 schemars = "1.0.4"
+typed-builder = "0.21.2"
+
 
 [dev-dependencies]
+tokio = { version = "1", features = ["full"] }
 easy-rpc = { path = ".", features = ["test"] }
+jsonrpsee = { version = "0.26", features = ["server", "macros", "client"] }

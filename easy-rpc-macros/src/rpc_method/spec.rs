@@ -1,5 +1,5 @@
 use quote::quote;
-use syn::{FnArg, ItemFn, LitStr, Pat, PatIdent, PatType, punctuated::Punctuated, token::Comma};
+use syn::{Expr, FnArg, ItemFn, Lit, Pat, PatIdent, PatType, punctuated::Punctuated, token::Comma};
 
 pub fn generate(input: &syn::ItemFn) -> proc_macro2::TokenStream {
     let name = input.sig.ident.to_string();
@@ -10,7 +10,7 @@ pub fn generate(input: &syn::ItemFn) -> proc_macro2::TokenStream {
     quote! {
         fn spec(&self) -> ::easy_rpc::spec::Method {
             ::easy_rpc::spec::Method {
-                name: stringify!(#name).into(),
+                name: #name.into(),
                 tags: None,
                 summary: None,
                 description: #description,
@@ -36,24 +36,56 @@ fn extract_deprecated(input: &ItemFn) -> proc_macro2::TokenStream {
     quote! { Some(#is_deprecated) }
 }
 
+/// custom attribute panicked
+/// message: Meta::NameValue {
+/// path: Path {
+///     leading_colon: None,
+///     segments: [
+///         PathSegment {
+///             ident: Ident {
+///                 ident: “doc”,
+///                 span: #0 bytes(488..529),
+///             },
+///             arguments: PathArguments::None,
+///         },
+///     ],
+/// },
+/// eq_token: Eq,
+/// value: Expr::Lit {
+///     attrs: [],
+///     lit: Lit::Str {
+///         token: “ This is a doc comment for the method.“,
+///     },
+/// },
+/// } (rustc)
 fn extract_description(input: &ItemFn) -> proc_macro2::TokenStream {
-    let doc_lines: Vec<String> = input
+    let doc_lines = input
         .attrs
         .iter()
         .filter_map(|attr| {
             if attr.path().is_ident("doc") {
-                attr.parse_args::<LitStr>().ok().map(|lit| lit.value())
+                attr.meta.require_name_value().ok().map(|v| match &v.value {
+                    Expr::Lit(e) => Some(e.lit.clone()),
+                    _ => None,
+                })
             } else {
                 None
             }
         })
-        .collect();
+        .filter_map(|lit| {
+            if let Some(Lit::Str(lit_str)) = lit {
+                Some(lit_str.value().trim_start().to_string())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<String>>()
+        .join("\n");
 
     if doc_lines.is_empty() {
         quote! { None }
     } else {
-        let joined = doc_lines.join("\n");
-        quote! { Some(#joined) }
+        quote! { Some(String::from(#doc_lines)) }
     }
 }
 

@@ -2,7 +2,7 @@
 //! creating and managing JSON-RPC modules using the `jsonrpsee` library. It allows for
 //! openspec_ registration of synchronous and asynchronous RPC methods, as well as conversion
 //! into a `jsonrpsee::RpcModule`.
-use crate::{RpcMethod, ServerHandler, spec};
+use crate::{OpenRpcSpec, RpcMethod, ServerHandler, spec};
 use jsonrpsee::core::RegisterMethodError;
 use serde::Serialize;
 
@@ -46,8 +46,8 @@ use serde::Serialize;
 pub struct EasyModule<Context = ()> {
     /// The underlying `jsonrpsee::RpcModule` instance.
     module: jsonrpsee::RpcModule<Context>,
-    /// A collection of method specifications for the registered RPC methods.
-    methods: Vec<spec::Method>,
+    /// OpenRPC Specification
+    spec: OpenRpcSpec,
 }
 
 impl<Context: Send + Sync + 'static> EasyModule<Context> {
@@ -61,8 +61,28 @@ impl<Context: Send + Sync + 'static> EasyModule<Context> {
     pub fn new(context: Context) -> Self {
         EasyModule {
             module: jsonrpsee::RpcModule::new(context),
-            methods: Vec::new(),
+            spec: OpenRpcSpec::builder().build(),
         }
+    }
+
+    /// Sets the OpenRPC Specification's info.
+    pub fn set_spec_info(&mut self, info: spec::Info) {
+        self.spec.info = info;
+    }
+
+    /// Sets the OpenRPC Specification's servers
+    pub fn set_spec_servers(&mut self, servers: Vec<spec::Server>) {
+        self.spec.servers = Some(servers);
+    }
+
+    /// Sets the OpenRPC Specification's external documentation
+    pub fn set_spec_external_docs(&mut self, external_docs: spec::ExternalDocumentation) {
+        self.spec.external_docs = Some(external_docs);
+    }
+
+    /// Returns a reference to the OpenRPC Specification (semver 2.0.0).
+    pub fn spec(&self) -> &OpenRpcSpec {
+        &self.spec
     }
 
     /// Adds a new RPC method to the module.
@@ -81,8 +101,8 @@ impl<Context: Send + Sync + 'static> EasyModule<Context> {
     pub fn add_method<T: Serialize + Clone + 'static>(
         &mut self,
         method: impl RpcMethod<Context, T>,
-    ) -> Result<(), RegisterMethodError> {
-        self.methods.push(method.spec());
+    ) -> Result<&mut Self, RegisterMethodError> {
+        self.spec.methods.push(method.spec());
 
         match method.handler() {
             ServerHandler::Sync(handler) => {
@@ -93,7 +113,7 @@ impl<Context: Send + Sync + 'static> EasyModule<Context> {
             }
         }
 
-        Ok(())
+        Ok(self)
     }
 
     /// Consumes the `EasyModule` and converts it into a `jsonrpsee::RpcModule`.
