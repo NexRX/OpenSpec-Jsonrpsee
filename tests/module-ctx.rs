@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::unused_unit)]
 
-use easy_rpc::{EasyModule, rpc, test::test_server};
+use openspec_jsonrpsee::{SpecModule, rpc, test::test_server};
 
 #[rpc]
 /// This is a doc comment for the method.
@@ -11,7 +11,7 @@ fn unit_ctx(#[context] ctx: &()) -> String {
 
 #[tokio::test]
 async fn test_unit_ctx() {
-    let mut module = EasyModule::new(());
+    let mut module = SpecModule::new(());
     module
         .add_method(UnitCtx)
         .expect("proof of concept should be able to register");
@@ -30,7 +30,7 @@ fn simple_ctx(#[context] ctx: &str) -> String {
 
 #[tokio::test]
 async fn test_simple_ctx() {
-    let mut module = EasyModule::new("string ctx".to_string());
+    let mut module = SpecModule::new("string ctx".to_string());
     module
         .add_method(SimpleCtx)
         .expect("proof of concept should be able to register");
@@ -56,7 +56,7 @@ fn struct_ctx(#[context] ctx: &CtxStruct) -> String {
 
 #[tokio::test]
 async fn test_struct_ctx() {
-    let mut module = EasyModule::new(CtxStruct {
+    let mut module = SpecModule::new(CtxStruct {
         ctx_value: "string ctx".to_string(),
     });
     module

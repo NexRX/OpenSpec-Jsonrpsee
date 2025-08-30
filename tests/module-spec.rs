@@ -1,6 +1,6 @@
 #![allow(deprecated)]
 
-use easy_rpc::{EasyModule, rpc};
+use openspec_jsonrpsee::{SpecModule, rpc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -29,7 +29,7 @@ fn method_b(value: StructB) -> String {
 
 #[tokio::test]
 async fn test_generated_spec() -> Result<(), Box<dyn std::error::Error>> {
-    let mut module = EasyModule::new(());
+    let mut module = SpecModule::new(());
     let spec = module.add_method(MethodA)?.add_method(MethodB)?.spec();
 
     assert_eq!(spec.methods.len(), 2);

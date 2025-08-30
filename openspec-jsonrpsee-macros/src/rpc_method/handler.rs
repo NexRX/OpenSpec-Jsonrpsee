@@ -52,7 +52,7 @@ fn generate_async_handler(
 ) -> TokenStream2 {
     quote::quote! {
         #[allow(clippy::ptr_arg)] // Suppressed due to complexity in generating for all context types
-        fn handler(&self) -> ::easy_rpc::ServerHandler<#context_ty_owned, ::jsonrpsee::core::RpcResult<#response_ty>> {
+        fn handler(&self) -> ::openspec_jsonrpsee::ServerHandler<#context_ty_owned, ::jsonrpsee::core::RpcResult<#response_ty>> {
             fn callback_wrapper(
                 params: ::jsonrpsee::types::Params<'static>,
                 #context_ident: ::std::sync::Arc<#context_ty_owned>,
@@ -67,7 +67,7 @@ fn generate_async_handler(
                 })
             }
 
-            ::easy_rpc::ServerHandler::Async(callback_wrapper)
+            ::openspec_jsonrpsee::ServerHandler::Async(callback_wrapper)
         }
     }
 }
@@ -82,7 +82,7 @@ fn generate_sync_handler(
 ) -> TokenStream2 {
     quote::quote! {
         #[allow(clippy::ptr_arg)] // Suppressed due to complexity in generating for all context types
-        fn handler(&self) -> ::easy_rpc::ServerHandler<#context_ty_owned, ::jsonrpsee::core::RpcResult<#response_ty>> {
+        fn handler(&self) -> ::openspec_jsonrpsee::ServerHandler<#context_ty_owned, ::jsonrpsee::core::RpcResult<#response_ty>> {
             fn callback_wrapper<'a, 'b, 'c>(
                 params: ::jsonrpsee::types::Params<'a>,
                 #context_ident: &'b #context_ty_owned,
@@ -93,7 +93,7 @@ fn generate_sync_handler(
                 Ok(response)
             }
 
-            ::easy_rpc::ServerHandler::Sync(callback_wrapper)
+            ::openspec_jsonrpsee::ServerHandler::Sync(callback_wrapper)
         }
     }
 }

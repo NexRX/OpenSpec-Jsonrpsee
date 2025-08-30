@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::unused_unit)]
 
-use easy_rpc::{EasyModule, rpc, test::test_server};
+use openspec_jsonrpsee::{SpecModule, rpc, test::test_server};
 use serde_json::json;
 
 #[rpc]
@@ -12,7 +12,7 @@ fn optional_arg(first_arg: Option<String>) -> String {
 
 #[tokio::test]
 async fn test_handles_none() {
-    let mut module = EasyModule::new(());
+    let mut module = SpecModule::new(());
     module
         .add_method(OptionalArg)
         .expect("proof of concept should be able to register");

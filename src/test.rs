@@ -1,37 +1,37 @@
-//! This module provides utilities for testing an `EasyModule` with a JSON-RPC server.
+//! This module provides utilities for testing an `SpecModule` with a JSON-RPC server.
 //! It includes a function to set up a test server and client for integration testing.
-use crate::EasyModule;
+use crate::SpecModule;
 use jsonrpsee::{http_client::HttpClient, server::Server};
 use std::net::SocketAddr;
 
-/// Sets up a test JSON-RPC server and client for the provided `EasyModule`.
+/// Sets up a test JSON-RPC server and client for the provided `SpecModule`.
 ///
 /// # Type Parameters
 /// - `Context`: The context type that must implement `Send` and `Sync` traits and have a static lifetime.
 ///
 /// # Arguments
-/// - `module`: The `EasyModule` to be tested, which will be converted into a JSON-RPC module.
+/// - `module`: The `SpecModule` to be tested, which will be converted into a JSON-RPC module.
 ///
 /// # Returns
 /// - `Ok((HttpClient, SocketAddr))`: A tuple containing the HTTP client and the server's socket address.
-/// - `Err(anyhow::Error)`: An error if the server setup fails.
+/// - `Err(std::io::error::Error)`: An error if the server setup fails.
 ///
 /// # Example
 /// ```no_run
-/// use easy_rpc::{EasyModule, test_server};
+/// use openspec_jsonrpsee::{SpecModule, test_server};
 /// use jsonrpsee::server::Server;
 /// use std::net::SocketAddr;
 ///
 /// #[tokio::main]
-/// async fn main() -> anyhow::Result<()> {
-///     let module = EasyModule::new(());
+/// async fn main() -> std::io::Result<()> {
+///     let module = SpecModule::new(());
 ///     let (client, addr) = test_server(module).await?;
 ///     println!("Test server running at: {}", addr);
 ///     Ok(())
 /// }
 /// ```
 pub async fn test_server<Context: Send + Sync + 'static>(
-    module: EasyModule<Context>,
+    module: SpecModule<Context>,
 ) -> std::io::Result<(HttpClient, SocketAddr)> {
     // Build a new JSON-RPC server bound to a random available port.
     let server = Server::builder()
@@ -42,7 +42,7 @@ pub async fn test_server<Context: Send + Sync + 'static>(
         )
         .await?;
 
-    // Convert the provided `EasyModule` into a JSON-RPC module.
+    // Convert the provided `SpecModule` into a JSON-RPC module.
     let module = module.into_jsonrpsee_module();
 
     // Retrieve the local address of the server.

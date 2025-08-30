@@ -8,8 +8,8 @@ pub fn generate(input: &syn::ItemFn) -> proc_macro2::TokenStream {
     let params = extract_params(input);
 
     quote! {
-        fn spec(&self) -> ::easy_rpc::spec::Method {
-            ::easy_rpc::spec::Method {
+        fn spec(&self) -> ::openspec_jsonrpsee::spec::Method {
+            ::openspec_jsonrpsee::spec::Method {
                 name: #name.into(),
                 tags: None,
                 summary: None,
@@ -115,7 +115,7 @@ fn extract_params(input: &ItemFn) -> Vec<proc_macro2::TokenStream> {
             };
 
             quote! {
-                ::easy_rpc::spec::ContentDescriptor {
+                ::openspec_jsonrpsee::spec::ContentDescriptor {
                     name: #name,
                     summary: None,
                     description: None,

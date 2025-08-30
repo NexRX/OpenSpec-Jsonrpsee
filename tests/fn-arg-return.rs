@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::unused_unit)]
 
-use easy_rpc::{EasyModule, rpc, test::test_server};
+use openspec_jsonrpsee::{SpecModule, rpc, test::test_server};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +13,7 @@ fn simple_args(first_arg: String) -> String {
 
 #[tokio::test]
 async fn test_handles_simple_args() {
-    let mut module = EasyModule::new(());
+    let mut module = SpecModule::new(());
     module
         .add_method(SimpleArgs)
         .expect("proof of concept should be able to register");
@@ -38,7 +38,7 @@ pub fn struct_args(mut user: User) -> User {
 
 #[tokio::test]
 async fn test_handles_struct_args() {
-    let mut module = EasyModule::new(());
+    let mut module = SpecModule::new(());
     module
         .add_method(StructArgs)
         .expect("proof of concept should be able to register");
@@ -66,7 +66,7 @@ fn multiple_args(mut user: User, prefix: String) -> User {
 
 #[tokio::test]
 async fn test_handles_multiple_args() {
-    let mut module = EasyModule::new(());
+    let mut module = SpecModule::new(());
     module
         .add_method(MultipleArgs)
         .expect("proof of concept should be able to register");
@@ -105,7 +105,7 @@ fn struct_in_struct_args(value: StructA) -> StructB {
 
 #[tokio::test]
 async fn test_handles_struct_in_struct() {
-    let mut module = EasyModule::new(());
+    let mut module = SpecModule::new(());
     module
         .add_method(StructInStructArgs)
         .expect("proof of concept should be able to register");
@@ -132,7 +132,7 @@ fn reference_args(value: &str) -> String {
 
 #[tokio::test]
 async fn test_handles_reference_args() {
-    let mut module = EasyModule::new(());
+    let mut module = SpecModule::new(());
     module
         .add_method(ReferenceArgs)
         .expect("proof of concept should be able to register");
@@ -153,7 +153,7 @@ fn vector_args(values: Vec<String>) -> usize {
 
 #[tokio::test]
 async fn test_handles_vector_args() {
-    let mut module = EasyModule::new(());
+    let mut module = SpecModule::new(());
     module
         .add_method(VectorArgs)
         .expect("proof of concept should be able to register");

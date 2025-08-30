@@ -1,4 +1,4 @@
-//! This module defines the `EasyModule` struct, which provides a simplified interface for
+//! This module defines the `SpecModule` struct, which provides a simplified interface for
 //! creating and managing JSON-RPC modules using the `jsonrpsee` library. It allows for
 //! openspec_ registration of synchronous and asynchronous RPC methods, as well as conversion
 //! into a `jsonrpsee::RpcModule`.
@@ -14,7 +14,7 @@ use serde::Serialize;
 /// # Example Usage
 ///
 /// ```
-/// use easy_rpc::{EasyModule, rpc};
+/// use openspec_jsonrpsee::{SpecModule, rpc};
 /// use jsonrpsee::server::Server;
 ///
 /// #[rpc]
@@ -28,7 +28,7 @@ use serde::Serialize;
 ///
 /// pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
 ///     // Register the method(s) in the module
-///     let mut module = EasyModule::new(());
+///     let mut module = SpecModule::new(());
 ///     module.add_method(AsyncDoSomething)?;
 ///
 ///     let server = Server::builder()
@@ -45,23 +45,23 @@ use serde::Serialize;
 /// # Type Parameters
 /// - `Context`: The context type that will be passed to all registered methods.
 ///   Defaults to `()` if not specified.
-pub struct EasyModule<Context = ()> {
+pub struct SpecModule<Context = ()> {
     /// The underlying `jsonrpsee::RpcModule` instance.
     module: jsonrpsee::RpcModule<Context>,
     /// OpenRPC Specification
     spec: OpenRpcSpec,
 }
 
-impl<Context: Send + Sync + 'static> EasyModule<Context> {
-    /// Creates a new `EasyModule` with the given context.
+impl<Context: Send + Sync + 'static> SpecModule<Context> {
+    /// Creates a new `SpecModule` with the given context.
     ///
     /// # Arguments
     /// - `context`: The context to be passed to all registered methods.
     ///
     /// # Returns
-    /// A new instance of `EasyModule`.
+    /// A new instance of `SpecModule`.
     pub fn new(context: Context) -> Self {
-        EasyModule {
+        SpecModule {
             module: jsonrpsee::RpcModule::new(context),
             spec: OpenRpcSpec::builder().build(),
         }
@@ -123,7 +123,7 @@ impl<Context: Send + Sync + 'static> EasyModule<Context> {
         Ok(self)
     }
 
-    /// Consumes the `EasyModule` and converts it into a `jsonrpsee::RpcModule`.
+    /// Consumes the `SpecModule` and converts it into a `jsonrpsee::RpcModule`.
     ///
     /// # Returns
     /// The underlying `jsonrpsee::RpcModule` instance.
@@ -132,8 +132,8 @@ impl<Context: Send + Sync + 'static> EasyModule<Context> {
     }
 }
 
-impl<Context: Send + Sync + 'static> From<EasyModule<Context>> for jsonrpsee::RpcModule<Context> {
-    fn from(val: EasyModule<Context>) -> Self {
+impl<Context: Send + Sync + 'static> From<SpecModule<Context>> for jsonrpsee::RpcModule<Context> {
+    fn from(val: SpecModule<Context>) -> Self {
         val.into_jsonrpsee_module()
     }
 }

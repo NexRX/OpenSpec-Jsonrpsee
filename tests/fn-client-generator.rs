@@ -1,8 +1,8 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::unused_unit)]
 
-use easy_rpc::{EasyModule, rpc, test::test_server};
 use jsonrpsee::http_client::HttpClient;
+use openspec_jsonrpsee::{SpecModule, rpc, test::test_server};
 
 struct MyClient {
     client: HttpClient,
@@ -22,7 +22,7 @@ fn different_method() -> String {
 
 #[tokio::test]
 async fn test_handles_simple_args() {
-    let mut module = EasyModule::new(());
+    let mut module = SpecModule::new(());
     module.add_method(SimpleMethod).unwrap();
     module.add_method(DifferentMethod).unwrap();
 
@@ -46,7 +46,7 @@ fn another_method() -> String {
 
 #[tokio::test]
 async fn test_unit_client() {
-    let mut module = EasyModule::new(());
+    let mut module = SpecModule::new(());
     module.add_method(AnotherMethod).unwrap();
 
     let (client, _addr) = test_server(module).await.expect("server should start");

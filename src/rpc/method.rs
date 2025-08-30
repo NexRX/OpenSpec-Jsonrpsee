@@ -1,16 +1,16 @@
-//! This module defines the core abstractions for RPC methods and their handlers in the `easy_rpc` framework.
+//! This module defines the core abstractions for RPC methods and their handlers in the `openspec_jsonrpsee` framework.
 //!
 //! The module provides:
 //! - Type definitions for synchronous and asynchronous RPC callbacks.
 //! - The `ServerHandler` enum to represent server-side handlers for RPC methods.
 //! - The `RpcMethod` trait, which serves as the foundation for defining and registering RPC methods.
 //!
-//! The abstractions in this module are designed to work seamlessly with the `easy_rpc` framework,
+//! The abstractions in this module are designed to work seamlessly with the `openspec_jsonrpsee` framework,
 //! enabling developers to define and manage RPC methods with minimal boilerplate.
 //!
 //! # Example
 //! ```
-//! use easy_rpc::{RpcMethod, ServerHandler};
+//! use openspec_jsonrpsee::{RpcMethod, ServerHandler};
 //! use jsonrpsee::core::RpcResult;
 //!
 //! struct MyRpcMethod;
@@ -20,7 +20,7 @@
 //!         "my_rpc_method"
 //!     }
 //!
-//!     fn spec(&self) -> easy_rpc::spec::Method {
+//!     fn spec(&self) -> openspec_jsonrpsee::spec::Method {
 //!         // Return the OpenRPC specification for the method
 //!         unimplemented!()
 //!     }
@@ -55,9 +55,9 @@ pub enum ServerHandler<Context, Response> {
     Async(AsyncCallback<Context, Response>),
 }
 
-/// Represents an RPC method that can be registered with a [`easy_rpc::EasyModule`]].
+/// Represents an RPC method that can be registered with a [`openspec_jsonrpsee::SpecModule`]].
 /// You **aren't** expected to implement this trait directly. Instead, use the provided
-/// [`easy_rpc::rpc`] macro to define your RPC methods.
+/// [`openspec_jsonrpsee::rpc`] macro to define your RPC methods.
 ///
 /// # Type Parameters
 /// - `Context`: The type of the context can be passed to the handler.

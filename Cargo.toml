@@ -1,5 +1,5 @@
 [package]
-name = "easy-rpc"
+name = "openspec-jsonrpsee"
 version = "0.1.0"
 edition = "2024"
 
@@ -8,7 +8,7 @@ default = []
 test = ["dep:tokio"]
 
 [dependencies]
-easy-rpc-macros = { path = "./easy-rpc-macros" }
+openspec-jsonrpsee-macros = { path = "./openspec-jsonrpsee-macros" }
 jsonrpsee = { version = "0.26", default-features = false }
 serde = { version = "1.0.219", features = ["serde_derive"] }
 serde_json = { version = "1.0.143", default-features = false }
@@ -19,5 +19,5 @@ typed-builder = "0.21.2"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
-easy-rpc = { path = ".", features = ["test"] }
+openspec-jsonrpsee = { path = ".", features = ["test"] }
 jsonrpsee = { version = "0.26", features = ["server", "macros", "client"] }

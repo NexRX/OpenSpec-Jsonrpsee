@@ -44,7 +44,7 @@ pub fn generate_rpc_method(input: syn::ItemFn, args: RpcMethodArgs) -> TokenStre
             #fn_request_unchecked
         }
 
-        impl ::easy_rpc::RpcMethod<#context_ty_owned, #response_ty> for #output_ident {
+        impl ::openspec_jsonrpsee::RpcMethod<#context_ty_owned, #response_ty> for #output_ident {
             #fn_name
             #fn_spec
             #fn_handler

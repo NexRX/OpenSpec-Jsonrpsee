@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::unused_unit)]
 
-use easy_rpc::{EasyModule, rpc, test::test_server};
+use openspec_jsonrpsee::{SpecModule, rpc, test::test_server};
 
 #[rpc]
 /// This is a doc comment for the do_something method.
@@ -14,7 +14,7 @@ async fn async_do_something(_first_arg: String) -> String {
 
 #[tokio::test]
 pub async fn test_loads() {
-    let mut module = EasyModule::new(());
+    let mut module = SpecModule::new(());
     module
         .add_method(AsyncDoSomething)
         .expect("proof of concept should be able to register");
