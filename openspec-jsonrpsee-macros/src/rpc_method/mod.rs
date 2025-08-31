@@ -86,7 +86,7 @@ fn gen_impl_rpc_method(
     #[cfg(feature = "server")]
     {
         let fn_name = gen_fn_name(&input_ident);
-        let fn_spec = spec::generate(&input);
+        let fn_spec = spec::generate(&input, &model.output_ident);
         let fn_handler = handler::generate(&model);
 
         let context_ty_owned = &model.context_ty_owned;

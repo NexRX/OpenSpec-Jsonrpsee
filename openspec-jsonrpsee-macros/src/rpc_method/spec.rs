@@ -1,11 +1,15 @@
 use quote::quote;
-use syn::{Expr, FnArg, ItemFn, Lit, Pat, PatIdent, PatType, punctuated::Punctuated, token::Comma};
+use syn::{
+    Expr, FnArg, Ident, ItemFn, Lit, Pat, PatIdent, PatType, ReturnType, punctuated::Punctuated,
+    token::Comma,
+};
 
-pub fn generate(input: &syn::ItemFn) -> proc_macro2::TokenStream {
+pub fn generate(input: &syn::ItemFn, output_ident: &Ident) -> proc_macro2::TokenStream {
     let name = input.sig.ident.to_string();
     let description = extract_description(input);
     let deprecated = extract_deprecated(input);
     let params = extract_params(input);
+    let result = extract_result(input, output_ident);
 
     quote! {
         fn spec(&self) -> ::openspec_jsonrpsee::spec::Method {
@@ -16,7 +20,7 @@ pub fn generate(input: &syn::ItemFn) -> proc_macro2::TokenStream {
                 description: #description,
                 external_docs: None,
                 params: vec![#(#params),*],
-                result: None,
+                result: #result,
                 deprecated: #deprecated,
                 servers: None,
                 errors: None,
@@ -36,28 +40,6 @@ fn extract_deprecated(input: &ItemFn) -> proc_macro2::TokenStream {
     quote! { Some(#is_deprecated) }
 }
 
-/// custom attribute panicked
-/// message: Meta::NameValue {
-/// path: Path {
-///     leading_colon: None,
-///     segments: [
-///         PathSegment {
-///             ident: Ident {
-///                 ident: “doc”,
-///                 span: #0 bytes(488..529),
-///             },
-///             arguments: PathArguments::None,
-///         },
-///     ],
-/// },
-/// eq_token: Eq,
-/// value: Expr::Lit {
-///     attrs: [],
-///     lit: Lit::Str {
-///         token: “ This is a doc comment for the method.“,
-///     },
-/// },
-/// } (rustc)
 fn extract_description(input: &ItemFn) -> proc_macro2::TokenStream {
     let doc_lines = input
         .attrs
@@ -140,4 +122,28 @@ fn filtered_params(input: &Punctuated<FnArg, Comma>) -> Vec<FnArg> {
         })
         .cloned()
         .collect()
+}
+
+/// Generate the result spec component of the function
+fn extract_result(input: &ItemFn, output_ident: &Ident) -> proc_macro2::TokenStream {
+    let name = format!("{output_ident}Response");
+    let schema = match &input.sig.output {
+        ReturnType::Default => quote! { schemars::schema_for!(()) },
+        ReturnType::Type(_, ty) => quote! { schemars::schema_for!(#ty) },
+    };
+    let is_deprecated = input
+        .attrs
+        .iter()
+        .any(|attr| attr.path().is_ident("deprecated"));
+
+    quote! {
+        Some(::openspec_jsonrpsee::spec::ContentDescriptor {
+            name: String::from(#name),
+            summary: None,
+            description: None,
+            required: Some(true),
+            schema: #schema,
+            deprecated: Some(#is_deprecated),
+        })
+    }
 }
