@@ -1,55 +1,52 @@
 use super::model::RpcMethod;
 use proc_macro2::TokenStream as TokenStream2;
-use syn::{Ident, PatType, Type, punctuated::Punctuated, token::Comma};
+use quote::quote;
+use syn::{Ident, PatType, punctuated::Punctuated, token::Comma};
 
-pub fn generate(
-    RpcMethod {
-        input_async,
-        input_ident,
-        context_ty_owned,
-        context_ident,
-        fn_args_as_ident,
-        fn_args_contextless,
-        response_ty,
-        input_span,
-        ..
-    }: &RpcMethod,
-) -> TokenStream2 {
-    let fn_input = input_ident;
-    let arguments_parse_impl = gen_arguments_parse_impl(&fn_args_contextless);
-    let context_ident = context_ident
+pub fn generate(model: &RpcMethod) -> TokenStream2 {
+    let fn_input = &model.input_ident;
+    let arguments_parse_impl = gen_arguments_parse_impl(&model.fn_args_contextless);
+    let context_ident = model
+        .context_ident
         .clone()
-        .unwrap_or_else(|| Ident::new("_context", input_span.clone()));
+        .unwrap_or_else(|| Ident::new("_context", model.input_span.clone()));
 
-    if input_async.is_some() {
-        generate_async_handler(
-            context_ty_owned,
-            &response_ty,
-            &context_ident,
-            &arguments_parse_impl,
-            fn_input,
-            fn_args_as_ident,
-        )
+    if model.input_async.is_some() {
+        generate_async_handler(model, &context_ident, &arguments_parse_impl, &fn_input)
     } else {
-        generate_sync_handler(
-            context_ty_owned,
-            &response_ty,
-            &context_ident,
-            &arguments_parse_impl,
-            fn_input,
-            fn_args_as_ident,
-        )
+        generate_sync_handler(model, &context_ident, &arguments_parse_impl, &fn_input)
     }
 }
 
 fn generate_async_handler(
-    context_ty_owned: &Type,
-    response_ty: &Type,
+    RpcMethod {
+        context_ty_owned,
+        context_ident: ctx,
+        context_ty_referenced,
+        response_ty,
+        fn_args_as_ident,
+        ..
+    }: &RpcMethod,
     context_ident: &Ident,
     arguments_parse_impl: &TokenStream2,
     fn_input: &Ident,
-    fn_args_as_ident: &Punctuated<Ident, Comma>,
 ) -> TokenStream2 {
+    let fn_args_stream = fn_args_as_ident
+        .iter()
+        .map(|arg| {
+            if ctx.as_ref().is_some_and(|ctx| ctx == arg) {
+                if *context_ty_referenced {
+                    quote::quote! { &#arg }
+                } else {
+                    quote::quote! { (*#arg).clone() }
+                }
+            } else {
+                quote::quote! { #arg }
+            }
+        })
+        .collect::<Vec<_>>();
+    let fn_args_stream = quote! { #(#fn_args_stream),* };
+
     quote::quote! {
         #[allow(clippy::ptr_arg)] // Suppressed due to complexity in generating for all context types
         fn handler(&self) -> ::openspec_jsonrpsee::ServerHandler<#context_ty_owned, ::jsonrpsee::core::RpcResult<#response_ty>> {
@@ -62,7 +59,7 @@ fn generate_async_handler(
             > {
                 Box::pin(async move {
                     #arguments_parse_impl
-                    let response = #fn_input(#fn_args_as_ident).await;
+                    let response = #fn_input(#fn_args_stream).await;
                     Ok(response)
                 })
             }
@@ -73,12 +70,15 @@ fn generate_async_handler(
 }
 
 fn generate_sync_handler(
-    context_ty_owned: &Type,
-    response_ty: &Type,
+    RpcMethod {
+        context_ty_owned,
+        response_ty,
+        fn_args_as_ident,
+        ..
+    }: &RpcMethod,
     context_ident: &Ident,
     arguments_parse_impl: &TokenStream2,
     fn_input: &Ident,
-    fn_args_as_ident: &Punctuated<Ident, Comma>,
 ) -> TokenStream2 {
     quote::quote! {
         #[allow(clippy::ptr_arg)] // Suppressed due to complexity in generating for all context types

@@ -1,0 +1,69 @@
+{
+  "openrpc": "1.3.2",
+  "info": {
+    "title": "openspec-jsonrpsee",
+    "version": "0.1.0"
+  },
+  "methods": [
+    {
+      "name": "register_user",
+      "params": [
+        {
+          "name": "name",
+          "required": true,
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "string",
+            "type": "string"
+          },
+          "deprecated": false
+        },
+        {
+          "name": "age",
+          "required": true,
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "int64",
+            "type": "integer",
+            "format": "int64"
+          },
+          "deprecated": false
+        }
+      ],
+      "deprecated": false
+    },
+    {
+      "name": "get_user",
+      "params": [
+        {
+          "name": "user",
+          "required": true,
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "User",
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "name": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "password"
+            ]
+          },
+          "deprecated": false
+        }
+      ],
+      "deprecated": false
+    }
+  ]
+}

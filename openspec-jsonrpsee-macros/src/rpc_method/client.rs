@@ -16,22 +16,29 @@ pub fn generate(
         client_field,
     }: &RpcMethodArgs,
 ) -> TokenStream2 {
-    if client.is_none() {
-        return quote! {};
+    #[cfg(not(feature = "client"))]
+    {
+        quote! {}
     }
-    let client_field = client_field.clone().unwrap_or(syn::parse_quote!(client));
+    #[cfg(feature = "client")]
+    {
+        if client.is_none() {
+            return quote! {};
+        }
+        let client_field = client_field.clone().unwrap_or(syn::parse_quote!(client));
 
-    quote! {
-        impl #client {
-            #input_vis async fn #input_ident(&self, #fn_args_contextless) -> ::std::result::Result<#response_ty, ::jsonrpsee::core::ClientError> {
-                use ::jsonrpsee::core::client::ClientT as _;
+        quote! {
+            impl #client {
+                #input_vis async fn #input_ident(&self, #fn_args_contextless) -> ::std::result::Result<#response_ty, ::jsonrpsee::core::ClientError> {
+                    use ::jsonrpsee::core::client::ClientT as _;
 
-                let params = ::jsonrpsee::rpc_params!(#fn_args_contextless_as_ident);
-                let response = self.#client_field
-                    .request::<#response_ty, _>(stringify!(#input_ident), params)
-                    .await;
+                    let params = ::jsonrpsee::rpc_params!(#fn_args_contextless_as_ident);
+                    let response = self.#client_field
+                        .request::<#response_ty, _>(stringify!(#input_ident), params)
+                        .await;
 
-                response
+                    response
+                }
             }
         }
     }

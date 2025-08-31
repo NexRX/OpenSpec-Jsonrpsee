@@ -37,6 +37,7 @@ pub struct RpcMethod {
     #[allow(dead_code)]
     /// True if input used #[context]
     pub context_needed: bool,
+    pub context_ty_referenced: bool,
     #[allow(dead_code)]
     /// raw context type, e.g. &str
     pub context_ty: Type,
@@ -76,6 +77,7 @@ impl RpcMethod {
             ),
             context_needed,
             // context_ty_without_ref: remove_type_ref(&context_ty),
+            context_ty_referenced: matches!(context_ty, syn::Type::Reference(_)),
             context_ty_owned: owned_type_version(&context_ty),
             context_ty,
             context_ident: extract_context_ident(&input),

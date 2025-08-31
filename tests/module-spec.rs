@@ -47,6 +47,8 @@ async fn test_generated_spec() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(a.params[0].description, None);
     assert_eq!(a.params[0].required, Some(true));
     assert_eq!(a.params[0].schema, schemars::schema_for!(StructA));
+    let a_result = a.result.clone().expect("method a should have spec result");
+    assert_eq!(a_result.schema, schemars::schema_for!(StructB));
 
     let b = spec.methods[1].clone();
     assert_eq!(b.name, "method_b");
@@ -59,6 +61,8 @@ async fn test_generated_spec() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(b.params[0].description, None);
     assert_eq!(b.params[0].required, Some(true));
     assert_eq!(b.params[0].schema, schemars::schema_for!(StructB));
+    let b_result = b.result.clone().expect("method b should have spec result");
+    assert_eq!(b_result.schema, schemars::schema_for!(String));
 
     Ok(())
 }
