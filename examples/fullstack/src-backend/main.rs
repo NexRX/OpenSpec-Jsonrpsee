@@ -29,9 +29,9 @@ pub async fn register_user(#[context] ctx: &Ctx, name: String, age: i64) -> Resu
 }
 
 #[rpc]
-pub async fn get_user(#[context] ctx: &Ctx, user: User) -> Result<Option<User>, String> {
+pub async fn get_user(#[context] ctx: &Ctx, user_id: i64) -> Result<Option<User>, String> {
     sqlx::query_as::<_, User>("SELECT * FROM user WHERE id = ?")
-        .bind(user.id)
+        .bind(user_id)
         .fetch_optional(&ctx.database)
         .await
         .map_err(|err| err.to_string())

@@ -6,16 +6,28 @@
   "scripts": {
     "start": "vite",
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite",
+    "gen:rpc": "npm run gen:rpc:generate && npm run gen:rpc:move",
+    "gen:rpc:generate": "open-rpc-generator generate -t client -l typescript -n rpc-client -d ./spec.json -o ./",
+    "gen:rpc:move": "npx shx cp client/typescript/src/index.ts ./src/rpc-client.ts",
     "serve": "vite preview"
   },
   "license": "MIT",
   "devDependencies": {
+    "@open-rpc/generator": "^2.1.0",
+    "@types/events": "^3.0.3",
+    "@types/lodash": "^4.17.20",
+    "@types/node": "^24.3.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.0",
     "vite-plugin-solid": "^2.11.6"
   },
   "dependencies": {
+    "@open-rpc/client-js": "^1.8.1",
+    "@open-rpc/meta-schema": "^1.14.9",
+    "@open-rpc/schema-utils-js": "^2.1.2",
+    "events": "^3.3.0",
+    "lodash": "^4.17.21",
     "solid-js": "^1.9.5"
   }
 }
