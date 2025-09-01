@@ -1,10 +1,12 @@
+use proc_macro_error::abort;
+use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
-    Expr, FnArg, Ident, ItemFn, Lit, Pat, PatIdent, PatType, ReturnType, punctuated::Punctuated,
-    token::Comma,
+    Expr, FnArg, Ident, ItemFn, Lit, Pat, PatIdent, PatType, ReturnType, Type, parse_quote,
+    punctuated::Punctuated, token::Comma,
 };
 
-pub fn generate(input: &syn::ItemFn, output_ident: &Ident) -> proc_macro2::TokenStream {
+pub fn generate(input: &syn::ItemFn, output_ident: &Ident) -> TokenStream {
     let name = input.sig.ident.to_string();
     let description = extract_description(input);
     let deprecated = extract_deprecated(input);
@@ -32,7 +34,7 @@ pub fn generate(input: &syn::ItemFn, output_ident: &Ident) -> proc_macro2::Token
     }
 }
 
-fn extract_deprecated(input: &ItemFn) -> proc_macro2::TokenStream {
+fn extract_deprecated(input: &ItemFn) -> TokenStream {
     let is_deprecated = input
         .attrs
         .iter()
@@ -40,7 +42,7 @@ fn extract_deprecated(input: &ItemFn) -> proc_macro2::TokenStream {
     quote! { Some(#is_deprecated) }
 }
 
-fn extract_description(input: &ItemFn) -> proc_macro2::TokenStream {
+fn extract_description(input: &ItemFn) -> TokenStream {
     let doc_lines = input
         .attrs
         .iter()
@@ -71,7 +73,7 @@ fn extract_description(input: &ItemFn) -> proc_macro2::TokenStream {
     }
 }
 
-fn extract_params(input: &ItemFn) -> Vec<proc_macro2::TokenStream> {
+fn extract_params(input: &ItemFn) -> Vec<TokenStream> {
     filtered_params(&input.sig.inputs)
         .into_iter()
         .map(|param| {
@@ -84,8 +86,8 @@ fn extract_params(input: &ItemFn) -> Vec<proc_macro2::TokenStream> {
             };
 
             let schema = match &param {
-                FnArg::Typed(PatType { ty, .. }) => quote! { schemars::schema_for!(#ty) },
-                FnArg::Receiver(_) => quote! { panic!("Receiver type not supported for schema") },
+                FnArg::Typed(PatType { ty, .. }) => schema_generator(ty),
+                FnArg::Receiver(token) => abort!(token, "Receiver type not supported for schema"),
             };
 
             let deprecated = match &param {
@@ -125,11 +127,11 @@ fn filtered_params(input: &Punctuated<FnArg, Comma>) -> Vec<FnArg> {
 }
 
 /// Generate the result spec component of the function
-fn extract_result(input: &ItemFn, output_ident: &Ident) -> proc_macro2::TokenStream {
+fn extract_result(input: &ItemFn, output_ident: &Ident) -> TokenStream {
     let name = format!("{output_ident}Response");
     let schema = match &input.sig.output {
-        ReturnType::Default => quote! { schemars::schema_for!(()) },
-        ReturnType::Type(_, ty) => quote! { schemars::schema_for!(#ty) },
+        ReturnType::Default => schema_generator(&parse_quote! { () }),
+        ReturnType::Type(_, ty) => schema_generator(ty),
     };
     let is_deprecated = input
         .attrs
@@ -146,4 +148,15 @@ fn extract_result(input: &ItemFn, output_ident: &Ident) -> proc_macro2::TokenStr
             deprecated: Some(#is_deprecated),
         })
     }
+}
+
+fn schema_generator(ty: &Type) -> TokenStream {
+    quote! {{
+        ::schemars::generate::SchemaSettings::draft07().with(|s| {
+                s.meta_schema = None;
+                s.inline_subschemas = true;
+            })
+        .into_generator()
+        .into_root_schema_for::<#ty>()
+    }}
 }
